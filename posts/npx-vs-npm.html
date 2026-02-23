@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>npx versus npm</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/post.css">
+  <link rel="stylesheet" href="../highlightjs/a11y-light.min.css">
+  <script src="../highlightjs/highlight.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <a href="/" class="back-link">Home</a>
+
+    <article>
+      <header class="post-header">
+        <h1>npx versus npm</h1>
+        <div class="post-date">November 07, 2021</div>
+      </header>
+
+      <div class="post-content">
+        <p>You&#39;ve probably used the <code>npm</code> command before and know what it does. But if you&#39;ve wondered what <code>npx</code> does and how it&#39;s different from <code>npm</code>, you&#39;ve come to the right place. Let&#39;s take a closer look at what <code>npx</code> is.</p>
+        <p><code>npx</code> stands for Node Package Execute, which shipped with Node 8.2/npm 5.2.0+, and is a <strong>task runner</strong>.</p>
+        <p>On the other hand, <code>npm</code> is a <strong>task manager</strong>, and only installs and manages packages but doesn&#39;t run them.</p>
+        <p>Let&#39;s look at two examples to understand what this means.</p>
+        <hr>
+        <h2 id="example-1">EXAMPLE 1</h2>
+        <p>Let&#39;s say you&#39;ve installed webpack (and webpack-cli) locally, by running:</p>
+        <pre><code class="language-sh">$ npm i -D webpack webpack-cli</code></pre>
+        <p>If you want to execute the <code>webpack</code> package now, just running the following won&#39;t work:</p>
+        <pre><code class="language-sh">$ webpack</code></pre>
+        <p>Why? Because it&#39;s not a global install. When executables are installed using npm packages, npm creates links to them. <strong>Local</strong> installs have links created at the <code>./node_modules/.bin/</code> directory. <strong>Global</strong> installs have links created from the <code>bin/</code> directory.</p>
+        <p>So, you have two options here:</p>
+        <ol>
+        <li>Execute <code>webpack</code> using the local path by running the webpack binary:</li>
+        </ol>
+        <pre><code class="language-sh">$ ./node_modules/.bin/webpack</code></pre>
+        <p>or</p>
+        <ol>
+        <li>Add a script in your <code>package.json</code>:</li>
+        </ol>
+        <pre><code class="language-json">{
+  ...
+  "scripts": {
+    "webpack": "webpack"
+  },
+  ...
+}</code></pre>
+        <p>Then run the following in your terminal:</p>
+        <pre><code class="language-sh">$ npm run webpack</span></code></pre>
+        <p>Here&#39;s where <code>npx</code> can help make things easier. After installing webpack and webpack-cli by running:</p>
+        <pre><code class="language-sh">$ npm i -D webpack webpack-cli</code></pre>
+        <p>you can just run the following command:</p>
+        <pre><code class="language-sh">$ npx webpack</code></pre>
+        <hr>
+        <h2 id="example-2">EXAMPLE 2</h2>
+        <p>Let&#39;s say, that you want to use <code>create-react-app</code>, so you run this:</p>
+        <pre><code class="language-sh">$ npm i -g create-react-app &amp;&amp; create-react-app my-app</code></pre>
+        <p>And a few months later, if you want to create a new project, you need to run the following:</p>
+        <pre><code class="language-sh">$ create-react-app my-new-app</code></pre>
+        <p>But what if you wanted to use the latest version of CRA? You&#39;ll need to run the following command again:</p>
+        <pre><code class="language-sh">$ npm i -g create-react-app</code></pre>
+        <p>There must be an easier way to tackle this? You guessed it - <code>npx</code>. If you want to use the latest version of the package every time, without needing to re-install it globally, you can run the following command:</p>
+        <pre><code class="language-sh">$ npx create-react-app my-app</code></pre>
+        <hr>
+        <p>Using our two examples above, let&#39;s look at the three main features of <code>npx</code>.</p>
+        <h2 id="1-easily-run-local-commands">1. Easily run local commands</h2>
+        <p>Developers used to publish most of the executable commands as global packages, in order for them to be in the path and executable immediately. But this was a pain because you couldn&#39;t really install different versions of the same command.</p>
+        <p>Running <code>npx &lt;command_name&gt;</code> automatically finds the correct reference of the command inside the <code>node_modules</code> folder of a project, without needing to know the exact path, and without requiring the package to be installed globally and in the user&#39;s path (see <strong>EXAMPLE 1</strong>).</p>
+        <h2 id="2-installation-less-command-execution">2. Installation-less command execution</h2>
+        <p><code>npx</code> allows you to run commands without first installing them. This is useful because you don&#39;t need to install anything and you can run different versions of the same command, using the syntax @version.</p>
+        <p>A good example of this is create-react-app, as seen in <strong>EXAMPLE 2</strong> above. The different thing with <code>npx</code> here (as opposed to using <code>npm</code>) is that it will install create-react-app, run it once, then delete it — you won&#39;t have a local copy anymore.</p>
+        <p><code>npx</code> also allows you to try out a specific package easily, without needing to install the dependencies in your local <code>node_modules</code> folder.</p>
+        <h2 id="3-run-arbitrary-code-snippets-directly-from-a-url">3. Run arbitrary code snippets directly from a URL</h2>
+        <p><code>npx</code> does not limit you to the packages published on the npm registry. You can run code that sits in a GitHub gist, like this one for instance:</p>
+        <pre><code class="language-sh">$ npx https://gist.github.com/zkat/4</span>bc19503fe9e9309e2bfaa2c58074d32</code></pre>
+        <hr>
+        <p>To summarize, <code>npx</code> is a task runner that gives you a lot of flexibility when installing npm packages, and achieving that without clogging up your machine&#39;s filesystem unnecessarily - for this reason, it&#39;s recommended you use <code>npx</code> whenever possible.</p>
+        <p>I&#39;d love to hear if you have any comments. You can reach out to me on <a href="https://x.com/arashn_11" target="_blank" rel="noopener">X</a>.</p>
+      </div>
+    </article>
+  </div>
+
+  <script>hljs.highlightAll();</script>
+</body>
+</html>

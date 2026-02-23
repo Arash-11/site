@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Finite automata and regular expressions</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/post.css">
+</head>
+<body>
+  <div class="container">
+    <a href="/" class="back-link">Home</a>
+
+    <article>
+      <header class="post-header">
+        <h1>Finite automata and regular expressions</h1>
+        <div class="post-date">June 06, 2023</div>
+      </header>
+
+      <div class="post-content">
+        <p>I recently got curious about the inner workings of regular expression engines (the code that executes your regexes) and especially the computer science theory behind regular expressions themselves. So I decided to dig deeper into them by taking a fundamentals-first/bottom-up approach and writing down my learnings in the form of this blog post; kind of like a more polished version of my notes that, if still not useful for anyone else, I can at least come back to in the future.</p>
+        <p>Before we start, there are a few things to note:</p>
+        <ul>
+        <li>I will skip some definitions for the sake of brevity.</li>
+        <li>Some of these definitions are not rigorously defined in computer science academia and so it&#39;s important to remember that many of them are not set in stone and are considered more as approximations.</li>
+        <li>Last but not least, keep in mind that I&#39;m not an expert in this topic and this is just me jotting down my thoughts as I learn many of these things for the first time.</li>
+        </ul>
+        <p>With the prelude out of the way, let&#39;s start by quickly defining an abstract machine before we start looking at finite automata.</p>
+        <h2 id="abstract-machines">Abstract machines</h2>
+        <p>In theoretical computer science, an <strong>abstract machine</strong> is a <a href="https://en.wikipedia.org/wiki/Model_of_computation" target="_blank" rel="noopener noreferrer">model of computation</a>, a framework or model that describes the functionality of a machine, and what a machine can and cannot do.</p>
+        <p>The term &quot;machine&quot; here is somewhat interchangeable with &quot;computer&quot; but it&#39;s technically not accurate, since a machine can also refer to something theoretical. This is exactly what an abstract machine is actually -- it&#39;s theoretical. It ignores many aspects of hardware and focuses instead on the essential aspects of the computation process; something that you can think and reason about using just pen and paper.</p>
+        <p>They are &quot;abstract&quot; in that they ignore many of the details present in actual (hardware) machines and they are &quot;machines&quot; in that they execute programs one step at a time. Turing Machines, Cellular Automata, Lambda Calculus, and Finite Automata are a few examples of abstract machines.</p>
+        <p>An abstract machine implemented in software is called a <strong>virtual machine</strong>. Some examples of this are LLVM, JVM, BEAM (Erlang VM), Android Runtime (ART), and Valgrind.</p>
+        <blockquote>
+        <p>From here on, note that I will use the terms &quot;machine&quot; and &quot;automaton&quot; interchangeably since we&#39;re only dealing in the abstract and not with any physical device.</p>
+        </blockquote>
+        <h2 id="finite-automata">Finite automata</h2>
+        <p>A <strong>finite automaton</strong>, or a <strong>finite-state machine (FSM)</strong>, is the simplest model of computation that we can construct. It is an abstract machine that can be in exactly one of a finite number of <em>states</em> at any given time and it changes states in response to an input; this change of state is called a <em>transition</em>.</p>
+        <p>A finite automaton usually has two special states: a <em>start</em> state at which it starts and an <em>accept</em> state at which it ends, indicating that there&#39;s a match. The automaton starts at its start state, reads symbols one at a time from the input string, and follows the corresponding transitions. If the last state it&#39;s in is an accept state, it implies that the input string matches.</p>
+        <blockquote>
+        <p>A <strong>string</strong> is a finite _<a href="https://en.wikipedia.org/wiki/Sequence" target="_blank" rel="noopener noreferrer">sequence</a>_ of symbols.
+        Conceptually, it&#39;s very similar to the string data type most programming languages use. All of the following are valid strings that a machine can operate on: <code>12345</code>, <code>01101</code>, <code>hello</code>, <code>😄😃😆</code>, <code>7#1ab😃</code>.</p>
+        <p>An <strong>alphabet</strong> is the <em>set</em> of input symbols, even if they are the digits 0 and 1.</p>
+        </blockquote>
+        <p>Let&#39;s look at an example of a finite automaton which we&#39;ll call M<sub>1</sub>:</p>
+        <p><img src="../assets/fsm-regex/m1.png" alt="A diagram of a finite automaton."></p>
+        <p>The start state is the state with the leading arrow attached (q<sub>0</sub>) and the accept state is the one with the double circle (q<sub>2</sub>).</p>
+        <p>Inputting the string <code>01101</code> to this machine ends up in an <em>accept</em> state. On the other hand, inputting the string <code>00101</code> ends up in a non-accept state, which is usually called a <em>reject</em>.</p>
+        <p>We&#39;ll come back to this shortly but let&#39;s do a little detour here. Let&#39;s look at examples of the simplest finite automata that can be constructed; ones with only one state.</p>
+        <p>Here&#39;s a machine that accepts all possible strings of <code>0</code>s and <code>1</code>s:</p>
+        <p><img src="../assets/fsm-regex/all-strings.png" alt="A diagram of a finite automaton that accepts all strings of 0s and 1s."></p>
+        <p>And here&#39;s a machine that rejects all strings:</p>
+        <p><img src="../assets/fsm-regex/no-strings.png" alt="A diagram of a finite automaton that rejects all strings."></p>
+        <p>Here&#39;s a small quiz: what string does the following machine accept (or not accept, for that matter)?</p>
+        <p><img src="../assets/fsm-regex/epsilon-only.png" alt="A diagram of a finite automaton that only accepts empty strings."></p>
+        <p>Answer: This machine only accepts an empty string <code>ε</code> (Epsilon) and nothing else.</p>
+        <p>There is more one than one way of constructing a finite automaton that computes the same string, however, you must be careful when looking to see if two machines are computationally equivalent when dealing with <code>ε</code> (Epsilon), which is the empty string. Although it&#39;s an empty string, it&#39;s still a valid string.</p>
+        <p>Let&#39;s get back to M<sub>1</sub> now. Feel free to take a moment to think about the following: Is there a way to generalize this machine so that we know what input symbols lead to an accept state? In other words, if given an input symbol, how can we tell if it will lead to an accept state or not?</p>
+        <p>It may or may not be obvious at first glance but the only time this machine will end up in an accept state is when the input string contains the substring <code>11</code>.</p>
+        <p>With the above information, we can define this machine, M<sub>1</sub>, as such:</p>
+        <ul>
+        <li><code>L(M1) = { w | w contains the substring 11 }</code></li>
+        </ul>
+        <p>We can also say the following:</p>
+        <ul>
+        <li>&quot;L(M<sub>1</sub>) is the language of M<sub>1</sub>&quot;, or</li>
+        <li>&quot;M<sub>1</sub> recognizes L(M<sub>1</sub>)&quot;</li>
+        </ul>
+        <p>All three of these lines mean the same thing, they&#39;re just expressed in different ways.</p>
+        <p>The <code>L</code> in L(M<sub>1</sub>) stands for &quot;Language&quot;, and as you might be able to tell from the set notation above, it&#39;s defined as being the <a href="https://en.wikipedia.org/wiki/Set_(mathematics)" target="_blank" rel="noopener noreferrer">set</a> of strings that the machine accepts. In the case of M<sub>1</sub>, its language is the set of all finite strings of <code>0</code>s and <code>1</code>s that contain the substring <code>11</code>.</p>
+        <p>Another important term that often comes up when talking about languages is <strong>regular language</strong>. If a given machine is a finite automaton, its language is called a regular language. Likewise, if a given language is recognized by a finite automaton, it is a regular language.</p>
+        <p>The language of M<sub>1</sub>, that is L(M<sub>1</sub>), is a regular language.</p>
+        <p>We&#39;ll shortly see how this relates to regular expressions, but first, we&#39;ll need to look a little more at finite automata.</p>
+        <p><br /></p>
+        <h2 id="deterministic-and-nondeterministic-finite-automata">Deterministic and nondeterministic finite automata</h2>
+        <p>When someone says &quot;finite automaton&quot;, they&#39;re referring to one of the two types of finite automata:</p>
+        <ul>
+        <li><strong>Deterministic finite automata (DFA)</strong></li>
+        <li><strong>Nondeterministic finite automata (NFA)</strong></li>
+        </ul>
+        <p><a href="https://en.wikipedia.org/wiki/Nondeterministic_finite_automaton" target="_blank" rel="noopener noreferrer">Wikipedia defines DFA</a> as follows:</p>
+        <blockquote>
+        <ul>
+        <li>each of its transitions is uniquely determined by its source state and input symbol, and</li>
+        <li>reading an input symbol is required for each state transition.</li>
+        </ul>
+        </blockquote>
+        <p>This may be confusing to understand but, simply put, DFA is <em>deterministic</em> in the sense that given any state and any input symbol, there is only one transition defined. The machine is always certain about its next state and where to transition to.</p>
+        <p>The machine M<sub>1</sub>, shown above, is a DFA.</p>
+        <p>On the contrary, NFA is <em>nondeterministic</em> in that for a given state and an input symbol, there might be several possible next states or none at all. The machine has a degree of uncertainty about its next state.</p>
+        <p>Here&#39;s what an NFA might look like:</p>
+        <p><img src="../assets/fsm-regex/nfa.png" alt="A diagram of an NFA"></p>
+        <p>A DFA is a special case - a subset - of an NFA. Anything that a DFA can do, an NFA can do as well.</p>
+        <p>Now that we&#39;ve looked at DFAs and NFAs, I think it&#39;s a good time to look at regular expressions.</p>
+        <h2 id="regular-expressions">Regular expressions</h2>
+        <p>Drawing state diagrams like the ones above whenever you need to think about or use finite automata can become a hassle. The mathematician <a href="https://en.wikipedia.org/wiki/Stephen_Cole_Kleene" target="_blank" rel="noopener noreferrer">Stephen Kleene</a> wanted a way to describe regular languages more compactly, and so he came up with regular expressions in 1951.</p>
+        <p>A <strong>regular expression</strong> describes a finite automaton. As a matter of fact, a regular expression <em>is</em> a finite automaton, and vice versa.</p>
+        <p>(By the way, finite automata and regular expressions are also equivalent to the <a href="https://en.wikipedia.org/wiki/Chomsky_hierarchy#The_hierarchy" target="_blank" rel="noopener noreferrer">Type-3 grammar in the Chomsky hierarchy</a>, which I won&#39;t go into detail here.)</p>
+        <p>For the regular expression <code>ab*c</code>, we can create the following DFA:</p>
+        <p><img src="../assets/fsm-regex/abc-fsm.png" alt="A diagram of a DFA for the regex ab*c"></p>
+        <p>The <code>*</code> here in the regular expression is a <strong>regular operator</strong> (much like how there are arithmetic operators) called a <strong>closure</strong> or <strong>Kleene star</strong> (or just a <em>star</em>). It concatenates strings in the language zero or more times; <code>ab*c</code> will match <code>ac</code>, <code>abc</code>, <code>abbc</code>, <code>abbbc</code>, <code>abbbc</code>.. you get the idea.</p>
+        <p>However, things get a little trickier if we decide to do more with regular expressions. Suppose we wanted to create a finite automaton for the regular expression <code>abab|abbb</code>. We can construct one like so (the state labels are excluded because I&#39;m too lazy to put them all in when we&#39;re not going to use them anyways):</p>
+        <p><img src="../assets/fsm-regex/abab-abbb-nfa.png" alt="A diagram of a NFA for the regex abab|abbb"></p>
+        <p>This automaton is an NFA, so how can the machine know what state to transition next to? It can try and make a guess but issues can occur if the guess ends up being incorrect. We can fix this by converting this NFA to a DFA:</p>
+        <p><img src="../assets/fsm-regex/abab-abbb-dfa.png" alt="A diagram of a DFA for the regex abab|abbb"></p>
+        <p>You might be wondering what if the NFA cannot be converted into a DFA -- can NFAs always be converted into DFAs?</p>
+        <p>The answer turns out to be yes. The proof for that is out of the scope of this blog post but you can check out the paper &quot;<a href="https://ieeexplore.ieee.org/document/5392601" target="_blank" rel="noopener noreferrer">Finite Automata and Their Decision Problems</a>&quot; if you&#39;re interested.</p>
+        <p>However, there is a caveat. For the proof to work and to guarantee that your NFA can be converted into a DFA, you have to strictly stick to a finite automaton. Many modern regular expression engines are <a href="https://en.wikipedia.org/wiki/Regular_expression#Patterns_for_non-regular_languages" target="_blank" rel="noopener noreferrer">augmented with features</a> that do not strictly adhere to this theoretical computer science definition.</p>
+        <h2 id="summary">Summary</h2>
+        <p>I might write another post in the future that goes into more detail on one or several of the topics we touched here but I think I&#39;ll wrap up this post here. We started by looking at a definition for abstract machines and then moved on to finite automata, both deterministic and nondeterministic ones, and finally looked a little more closely at regular expressions.</p>
+        <p>I did not mention some of the more formal and mathematical definitions (eg. a finite automata is a 5-tuple defined as <code>M = (Q, Σ, δ, q0, F)</code>; looking up what the different symbols mean will be an exercise for you, the reader, if you&#39;re interested). I also did not go into detail of the implementation of regular expression engines, but Russ Cox has <a href="https://swtch.com/~rsc/regexp/" target="_blank" rel="noopener noreferrer">written some great stuff on the topic</a>.</p>
+        <hr>
+        <p>I&#39;d love to hear if you have any comments. You can reach out to me on <a href="https://x.com/arashn_11" target="_blank" rel="noopener">X</a>.</p>
+      </div>
+    </article>
+  </div>
+</body>
+</html>

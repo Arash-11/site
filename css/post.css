@@ -1,0 +1,148 @@
+/* ── Back link ── */
+.back-link {
+  display: inline-block;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+  margin-bottom: 2rem;
+}
+
+.back-link:hover {
+  text-decoration: underline;
+}
+
+.back-link::before {
+  content: "←";
+  position: relative;
+  display: inline-block; /* remove from the parent's underline */
+  top: -0.1rem;
+  margin-right: 6px;
+  font-size: 1.2rem;
+}
+
+/* ── Post header ── */
+.post-header {
+  margin-bottom: 1.5rem;
+}
+
+.post-header h1 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.post-date {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+}
+
+/* ── Post content ── */
+.post-content h1,
+.post-content h2,
+.post-content h3 {
+  margin-top: 1.75rem;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+
+.post-content h1 { font-size: 1.2rem; }
+.post-content h2 { font-size: 1.0rem; }
+.post-content h3 { font-size: 0.8rem; }
+
+.post-content p {
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.post-content a {
+  color: var(--text);
+}
+
+.post-content strong {
+  font-weight: 700;
+}
+
+.post-content em {
+  font-style: italic;
+}
+
+.post-content ul,
+.post-content ol {
+  margin-bottom: 1rem;
+  padding-left: 1.25rem;
+  font-size: 0.85rem;
+}
+
+.post-content li {
+  margin-bottom: 0.2rem;
+}
+
+.post-content blockquote {
+  border-left: 2px solid var(--border);
+  padding-left: 0.75rem;
+  margin: 1.25rem 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.post-content code {
+  font-family: inherit;
+  font-size: 0.82rem;
+  background: var(--code-bg);
+  padding: 0.1rem 0.3rem;
+}
+
+.post-content pre {
+  background: var(--code-bg);
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  margin-bottom: 1.25rem;
+  line-height: 1.45;
+  border: 1px solid var(--border);
+}
+
+.post-content pre code {
+  background: none;
+  padding: 0;
+  font-size: 0.8rem;
+}
+
+.post-content img {
+  max-width: 100%;
+  height: auto;
+  margin: 1.25rem 0;
+  display: block;
+}
+
+.post-content video {
+  max-width: 100%;
+  height: auto;
+  margin: 1.25rem 0;
+  display: block;
+}
+
+.post-content hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.75rem 0;
+}
+
+.post-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1.25rem;
+  font-size: 0.82rem;
+}
+
+.post-content th,
+.post-content td {
+  text-align: left;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.post-content th {
+  font-weight: 700;
+}

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Different prototypes in JavaScript</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/post.css">
+</head>
+<body>
+  <div class="container">
+    <a href="/" class="back-link">Home</a>
+
+    <article>
+      <header class="post-header">
+        <h1>Different prototypes in JavaScript</h1>
+        <div class="post-date">May 09, 2022</div>
+      </header>
+
+      <div class="post-content">
+        <p>One of the concepts that I was having some difficulty wrapping my head around when I started learning JavaScript was prototypal inheritance and especially the difference between <code>prototype</code> and <code>__proto__</code> and <code>[[Prototype]]</code> and <code>Object.getPrototypeOf()</code>. After a bunch of reading and experimenting, I came up with the following diagram to get a better understanding of the prototypal inheritance nature of JavaScript, but more importantly, the difference between the different &quot;prototype&quot;s.</p>
+        <p><img src="../assets/js-prototypes/prototype.png" alt="A diagram representing the prototype inheritance in a simple form."></p>
+        <p><em>Note: The only straight line used is to represent the prototype chain. Curved arrows are used for describing the properties and adding a little more context.</em></p>
+        <hr>
+        <h2 id="-prototype-and-prototype-"><code>[[Prototype]]</code> and <code>prototype</code></h2>
+        <p>In the diagram, we have a constructor function and an instance of it, called <code>Foobar</code> and <code>instance</code>, respectively.</p>
+        <p>The constructor will have a property called <code>prototype</code>, which is an object and is <strong>used as a blueprint for any instances created by it</strong>. The constructor and its instances will also have a special hidden property called <code>[[Prototype]]</code>, which is linked to <em>their respective constructors&#39;</em> <code>prototype</code> property.</p>
+        <p>When you call the constructor with the <code>new</code> keyword prepended (eg. <code>new Foobar()</code>), <code>prototype</code> will become a blueprint for the instance object you just created and it specifies that <code>[[Prototype]]</code> be assigned to that instance.</p>
+        <p>Note that JavaScript code on the page does not have direct access to hidden properties such as <code>[[Prototype]]</code>; hidden properties are denoted by the double square brackets wrapping the keyword. This is added by the JavaScript engine (such as the V8) and is only accessible in that environment.</p>
+        <p>However, for the sake of our mental model, we can think of it as <code>instance.[[Prototype]]</code> being linked to <code>Foobar.prototype</code>. At the same time, <code>Foobar.[[Prototype]]</code> will point to the <code>prototype</code> property of its constructor, which is <code>Function.prototype</code>. Keep in mind that <code>instance</code> does not have a <code>prototype</code> property. Why? Because it&#39;s not a constructor.</p>
+        <p>To summarize the above, a constructor object will have a hidden <code>[[Prototype]]</code> property that points to <em>its</em> constructor <strong>and</strong> a non-hidden <code>prototype</code> object property that becomes the blueprint for any instances you create.</p>
+        <p>Its instance will have also have a hidden <code>[[Prototype]]</code> property that points to its parent/constructor but won&#39;t have a <code>prototype</code> property unless it&#39;s used as a constructor.</p>
+        <p>As you can see, an instance&#39;s hidden <code>[[Prototype]]</code> property points to its constructor&#39;s <code>prototype</code> property. At the same time, this constructor&#39;s <code>[[Prototype]]</code> points to its parent constructor&#39;s <code>prototype</code>, and so on. These links create a chain - this is called the <strong>prototype chain</strong>.</p>
+        <hr>
+        <h2 id="accessing-prototype-">Accessing <code>[[Prototype]]</code></h2>
+        <p>So what is <code>__proto__</code> then? Recall that <code>[[Prototype]]</code> is a hidden property and you can&#39;t access it with your JavaScript code. So, many browsers implemented another property called <code>__proto__</code>, which exposes the value of the hidden <code>[[Prototype]]</code> of an object.</p>
+        <p>However, using <code>__proto__</code> is often discouraged. Instead, there&#39;s another way to access <code>[[Prototype]]</code>, which is to use the method <code>Object.getPrototypeOf()</code>. If you need to set the <code>[[Prototype]]</code> of an object to something else, you can use the <code>Object.setPrototypeOf()</code> method.</p>
+        <p>I hope this article helped clarify the different &quot;prototype&quot;s a little. This article is in no way comprehensive and only goes over a few parts related to JavaScript&#39;s prototypal inheritance. If you&#39;d like to read more about inheritance and the prototype chain, <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Inheritance_and_the_prototype_chain" target="_blank" rel="noopener noreferrer">this MDN doc</a> is a good place.</p>
+        <hr>
+        <p>I&#39;d love to hear if you have any comments. You can reach out to me on <a href="https://x.com/arashn_11" target="_blank" rel="noopener">X</a>.</p>
+      </div>
+    </article>
+  </div>
+</body>
+</html>

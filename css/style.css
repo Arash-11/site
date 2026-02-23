@@ -1,0 +1,128 @@
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg: #fbfcf8;
+  --text: #222;
+  --text-secondary: #666;
+  --link: #222;
+  --border: #ccc;
+  --code-bg: #e4e1d8;
+  --max-width: clamp(600px, 60%, 800px);
+}
+
+html {
+  height: 100%;
+  font-size: 16px;
+}
+
+body {
+  min-height: 100%;
+  font-family: 'JetBrains Mono', 'Courier New', Courier, monospace;
+  background-color: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 3rem 1.25rem 5rem;
+}
+
+/* ── Header ── */
+.site-header h1 {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.about {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  line-height: 1.8;
+}
+
+.about a {
+  color: var(--text);
+}
+
+/* ── Contact links ── */
+.contact-links {
+  margin-top: 1.2rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.contact-links a {
+  padding: 6px;
+  padding-left: 4px;
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.contact-links a:first-child {
+  padding: 4px;
+  padding-left: 0;
+}
+
+.contact-links a:hover {
+  text-decoration: underline;
+}
+
+.contact-links .sep {
+  margin: 0 0.25rem;
+}
+
+/* ── Section label ── */
+.section-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-top: 2.5rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.25rem;
+}
+
+/* ── Post list ── */
+.post-list {
+  list-style: none;
+}
+
+.post-list a {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  text-decoration: none;
+  color: var(--text);
+  padding: 0.35rem 0;
+  font-size: 0.85rem;
+}
+
+.post-list a:hover .post-title {
+  text-decoration: underline;
+}
+
+.post-list .post-title {
+  font-weight: 400;
+}
+
+.post-list .post-date {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+/* ── Footer ── */
+.site-footer {
+  margin-top: 3rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
