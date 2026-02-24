@@ -7,8 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/style.css">
-  <link rel="stylesheet" href="../css/post.css">
+  <link rel="stylesheet" href="../../css/style.css">
+  <link rel="stylesheet" href="../../css/post.css">
 </head>
 <body>
   <div class="container">
@@ -46,16 +46,16 @@
         <p>An <strong>alphabet</strong> is the <em>set</em> of input symbols, even if they are the digits 0 and 1.</p>
         </blockquote>
         <p>Let&#39;s look at an example of a finite automaton which we&#39;ll call M<sub>1</sub>:</p>
-        <p><img src="../assets/fsm-regex/m1.png" alt="A diagram of a finite automaton."></p>
+        <p><img src="../../assets/fsm-regex/m1.png" alt="A diagram of a finite automaton."></p>
         <p>The start state is the state with the leading arrow attached (q<sub>0</sub>) and the accept state is the one with the double circle (q<sub>2</sub>).</p>
         <p>Inputting the string <code>01101</code> to this machine ends up in an <em>accept</em> state. On the other hand, inputting the string <code>00101</code> ends up in a non-accept state, which is usually called a <em>reject</em>.</p>
         <p>We&#39;ll come back to this shortly but let&#39;s do a little detour here. Let&#39;s look at examples of the simplest finite automata that can be constructed; ones with only one state.</p>
         <p>Here&#39;s a machine that accepts all possible strings of <code>0</code>s and <code>1</code>s:</p>
-        <p><img src="../assets/fsm-regex/all-strings.png" alt="A diagram of a finite automaton that accepts all strings of 0s and 1s."></p>
+        <p><img src="../../assets/fsm-regex/all-strings.png" alt="A diagram of a finite automaton that accepts all strings of 0s and 1s."></p>
         <p>And here&#39;s a machine that rejects all strings:</p>
-        <p><img src="../assets/fsm-regex/no-strings.png" alt="A diagram of a finite automaton that rejects all strings."></p>
+        <p><img src="../../assets/fsm-regex/no-strings.png" alt="A diagram of a finite automaton that rejects all strings."></p>
         <p>Here&#39;s a small quiz: what string does the following machine accept (or not accept, for that matter)?</p>
-        <p><img src="../assets/fsm-regex/epsilon-only.png" alt="A diagram of a finite automaton that only accepts empty strings."></p>
+        <p><img src="../../assets/fsm-regex/epsilon-only.png" alt="A diagram of a finite automaton that only accepts empty strings."></p>
         <p>Answer: This machine only accepts an empty string <code>ε</code> (Epsilon) and nothing else.</p>
         <p>There is more one than one way of constructing a finite automaton that computes the same string, however, you must be careful when looking to see if two machines are computationally equivalent when dealing with <code>ε</code> (Epsilon), which is the empty string. Although it&#39;s an empty string, it&#39;s still a valid string.</p>
         <p>Let&#39;s get back to M<sub>1</sub> now. Feel free to take a moment to think about the following: Is there a way to generalize this machine so that we know what input symbols lead to an accept state? In other words, if given an input symbol, how can we tell if it will lead to an accept state or not?</p>
@@ -92,7 +92,7 @@
         <p>The machine M<sub>1</sub>, shown above, is a DFA.</p>
         <p>On the contrary, NFA is <em>nondeterministic</em> in that for a given state and an input symbol, there might be several possible next states or none at all. The machine has a degree of uncertainty about its next state.</p>
         <p>Here&#39;s what an NFA might look like:</p>
-        <p><img src="../assets/fsm-regex/nfa.png" alt="A diagram of an NFA"></p>
+        <p><img src="../../assets/fsm-regex/nfa.png" alt="A diagram of an NFA"></p>
         <p>A DFA is a special case - a subset - of an NFA. Anything that a DFA can do, an NFA can do as well.</p>
         <p>Now that we&#39;ve looked at DFAs and NFAs, I think it&#39;s a good time to look at regular expressions.</p>
         <h2 id="regular-expressions">Regular expressions</h2>
@@ -100,12 +100,12 @@
         <p>A <strong>regular expression</strong> describes a finite automaton. As a matter of fact, a regular expression <em>is</em> a finite automaton, and vice versa.</p>
         <p>(By the way, finite automata and regular expressions are also equivalent to the <a href="https://en.wikipedia.org/wiki/Chomsky_hierarchy#The_hierarchy" target="_blank" rel="noopener noreferrer">Type-3 grammar in the Chomsky hierarchy</a>, which I won&#39;t go into detail here.)</p>
         <p>For the regular expression <code>ab*c</code>, we can create the following DFA:</p>
-        <p><img src="../assets/fsm-regex/abc-fsm.png" alt="A diagram of a DFA for the regex ab*c"></p>
+        <p><img src="../../assets/fsm-regex/abc-fsm.png" alt="A diagram of a DFA for the regex ab*c"></p>
         <p>The <code>*</code> here in the regular expression is a <strong>regular operator</strong> (much like how there are arithmetic operators) called a <strong>closure</strong> or <strong>Kleene star</strong> (or just a <em>star</em>). It concatenates strings in the language zero or more times; <code>ab*c</code> will match <code>ac</code>, <code>abc</code>, <code>abbc</code>, <code>abbbc</code>, <code>abbbc</code>.. you get the idea.</p>
         <p>However, things get a little trickier if we decide to do more with regular expressions. Suppose we wanted to create a finite automaton for the regular expression <code>abab|abbb</code>. We can construct one like so (the state labels are excluded because I&#39;m too lazy to put them all in when we&#39;re not going to use them anyways):</p>
-        <p><img src="../assets/fsm-regex/abab-abbb-nfa.png" alt="A diagram of a NFA for the regex abab|abbb"></p>
+        <p><img src="../../assets/fsm-regex/abab-abbb-nfa.png" alt="A diagram of a NFA for the regex abab|abbb"></p>
         <p>This automaton is an NFA, so how can the machine know what state to transition next to? It can try and make a guess but issues can occur if the guess ends up being incorrect. We can fix this by converting this NFA to a DFA:</p>
-        <p><img src="../assets/fsm-regex/abab-abbb-dfa.png" alt="A diagram of a DFA for the regex abab|abbb"></p>
+        <p><img src="../../assets/fsm-regex/abab-abbb-dfa.png" alt="A diagram of a DFA for the regex abab|abbb"></p>
         <p>You might be wondering what if the NFA cannot be converted into a DFA -- can NFAs always be converted into DFAs?</p>
         <p>The answer turns out to be yes. The proof for that is out of the scope of this blog post but you can check out the paper &quot;<a href="https://ieeexplore.ieee.org/document/5392601" target="_blank" rel="noopener noreferrer">Finite Automata and Their Decision Problems</a>&quot; if you&#39;re interested.</p>
         <p>However, there is a caveat. For the proof to work and to guarantee that your NFA can be converted into a DFA, you have to strictly stick to a finite automaton. Many modern regular expression engines are <a href="https://en.wikipedia.org/wiki/Regular_expression#Patterns_for_non-regular_languages" target="_blank" rel="noopener noreferrer">augmented with features</a> that do not strictly adhere to this theoretical computer science definition.</p>
