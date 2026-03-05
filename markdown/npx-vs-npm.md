@@ -129,4 +129,4 @@ $ npx https://gist.github.com/zkat/4bc19503fe9e9309e2bfaa2c58074d32
 
 To summarize, `npx` is a task runner that gives you a lot of flexibility when installing npm packages, and achieving that without clogging up your machine's filesystem unnecessarily - for this reason, it's recommended you use `npx` whenever possible.
 
-I'd love to hear if you have any comments. You can reach out to me on <a href="https://x.com/arashn_11" target="_blank" rel="noopener">X</a>.
+I'd love to get your feedback and comments. You can reach out to me on <a href="https://x.com/arashn_11" target="_blank" rel="noopener">X</a> or at arashnawy[at]gmail.com.

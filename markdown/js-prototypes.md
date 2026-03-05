@@ -43,4 +43,4 @@ I hope this article helped clarify the different "prototype"s a little. This art
 
 ---
 
-I'd love to hear if you have any comments. You can reach out to me on <a href="https://x.com/arashn_11" target="_blank" rel="noopener">X</a>.
+I'd love to get your feedback and comments. You can reach out to me on <a href="https://x.com/arashn_11" target="_blank" rel="noopener">X</a> or at arashnawy[at]gmail.com.
