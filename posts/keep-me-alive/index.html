@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Keep me alive! A troubleshooting journey with pg_repack</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../css/style.css">
+  <link rel="stylesheet" href="../../css/post.css">
+</head>
+<body>
+  <div class="container">
+    <a href="/" class="back-link">Home</a>
+
+    <article>
+      <header class="post-header">
+        <h1>Keep me alive! A troubleshooting journey with pg_repack</h1>
+        <div class="post-date">March 05, 2026</div>
+      </header>
+
+      <div class="post-content">
+        <p>This story of a troubleshooting journey starts with me, my 40GB Postgres table, and <a href="https://github.com/reorg/pg_repack" target="_blank" rel="noopener noreferrer">pg_repack</a> (let&#39;s be good and <a href="https://www.depesz.com/2023/02/06/when-to-use-vacuum-full/" target="_blank" rel="noopener noreferrer">avoid <code>VACUUM FULL</code></a>).</p>
+        <p><em>(2 minutes after starting pg_repack)</em> Out of curiosity, let&#39;s check what tables pg_repack has created. Based on what I know about how pg_repack works, there should be two tables: one log table and one new shadow table.</p>
+        <pre><code class="language-psql">postgres=> SELECT relid, schemaname, relname
+postgres-> FROM pg_catalog.pg_stat_all_tables
+postgres-> WHERE schemaname = 'repack';
+relid  | schemaname |  relname
+--------+------------+-----------
+774258 | repack     | log_46593
+(1 row)
+</code></pre>
+        <p>Okay, just the log table so far. Let me look at the activity:</p>
+        <p><img src="../../assets/keep-me-alive/active.png" alt="psql showing active state"></p>
+        <p>Nice! Seems like the process responsible for the <code>INSERT</code> is active.</p>
+        <p><em>(10 minutes later)</em> Let&#39;s see if the second table is showing now:</p>
+        <pre><code class="language-psql">postgres=> SELECT relid, schemaname, relname
+postgres-> FROM pg_catalog.pg_stat_all_tables
+postgres-> WHERE schemaname = 'repack';
+relid  | schemaname |  relname
+--------+------------+-----------
+774258 | repack     | log_46593
+(1 row)
+</code></pre>
+        <p>Interesting, still nothing. It can take time. As long as the <code>INSERT</code> process is active everything should be fine.</p>
+        <p><img src="../../assets/keep-me-alive/idle_in_transaction.png" alt="psql showing idle_in_transaction state"></p>
+        <p>Oh, it&#39;s <a href="https://www.postgresql.org/docs/current/monitoring-stats.html" target="_blank" rel="noopener noreferrer">waiting on the client</a>? Feels a bit weird that it&#39;s idle. Will it become active again..?</p>
+        <p>Let&#39;s be patient and give it a few more minutes.</p>
+        <p><img src="../../assets/keep-me-alive/disappeared.png" alt="psql showing disappeared state"></p>
+        <p>Huh? Where did the other process go?!</p>
+        <p>I had run <code>pg_repack</code> with the <code>--echo --elevel=DEBUG</code> options; let me look at the output. <em>(Ellipsis indicates truncated content)</em></p>
+        <pre><code class="language-sh">    ...
+DEBUG: ---- repack_one_table ----
+DEBUG: target_name       : public.users
+    ...
+DEBUG: ---- setup ----
+    ...
+LOG: (query) BEGIN ISOLATION LEVEL READ COMMITTED
+LOG: (query) SET LOCAL lock_timeout = 100
+LOG: (query) LOCK TABLE public.users IN ACCESS EXCLUSIVE MODE
+LOG: (query) RESET lock_timeout
+    ...
+DEBUG: LOCK TABLE public.users IN ACCESS SHARE MODE
+OG: (query) SELECT pid FROM pg_locks WHERE locktype = 'relation' AND granted = false AND relation = 46900 AND mode = 'AccessExclusiveLock' AND pid &lt;&gt; pg_backend_pid()
+DEBUG: No competing DDL to cancel.
+LOG: (query) COMMIT
+DEBUG: Waiting on ACCESS SHARE lock...
+DEBUG: ---- copy tuples ----
+LOG: (query) BEGIN ISOLATION LEVEL SERIALIZABLE
+LOG: (query) SELECT set_config('work_mem', current_setting('maintenance_work_mem'), true)
+LOG: (query) SET LOCAL synchronize_seqscans = off
+    ...
+LOG: (query) INSERT INTO repack.table_46593 SELECT id,user_id,created_at,updated_at,item_type,state FROM ONLY public.users
+</code></pre>
+        <p>It has stopped at the <code>INSERT</code> and the transaction has not been committed yet. This must be why it was in the <code>idle in transaction</code> state earlier.</p>
+        <p>But why did the process disappear? Did it OOM?</p>
+        <p>Nope, there is enough memory and there no OOM logs. Also cannot be lock contention. Perhaps some other resource contention? I&#39;m not really sure. Maybe a temporary glitch of some sort? Let me kill these processes, clean up, and retry.</p>
+        <p>Same issue.</p>
+        <p>I need to do some more reading and research on pg_repack; maybe I&#39;m misunderstanding something.</p>
+        <p><em>(Several hours later; 11 pm EST)</em> Revisiting this mystery. Let&#39;s re-run everything from the start.</p>
+        <p>We&#39;re 15 minutes in and the <code>INSERT</code> process is still <code>active</code>.</p>
+        <p><em>(Much later; past midnight)</em> I can see two tables now! Let&#39;s look at the pg_repack command output logs.</p>
+        <pre><code class="language-sh">    ...
+DEBUG: ---- swap ----
+    <span class="hljs-string">.</span><span class="hljs-string">.</span><span class="hljs-string">.</span>
+DEBUG: ---- drop ----
+    <span class="hljs-string">.</span><span class="hljs-string">.</span><span class="hljs-string">.</span>
+DEBUG: ---- analyze ----
+</code></pre>
+        <p>Aaaaand done. Shell process exited with status code 0. Everything looks good.</p>
+        <p>Job&#39;s done. But... I want to know why it did not work in the morning when it worked now, at night. The database load is definitely much lower now so was the DB load the cause? But it&#39;s unclear to me how that would prevent the transaction from committing and cause the process to go idle in the transaction, disappearing just moments later.</p>
+        <p>What is pg_repack even doing? Let&#39;s try getting a stack trace or something.</p>
+        <p>Found <code>sample</code> for macOS. Running <code>sample $(pgrep pg_repack) 1</code>:</p>
+<pre><code class="language-sh">Sampling process 4658 for 1 second with 1 millisecond of run time between samples
+Sampling completed, processing symbols...
+Sample analysis of process 4658 written to file /tmp/pg_repack_2026-03-04_204523_B3D1.sample.txt
+
+Call graph:
+    865 Thread_8292553   DispatchQueue_1: com.apple.main-thread  (serial)
+    + 865 start  (in dyld) + 6076  [0x195eaeb98]
+    +   865 main  (in pg_repack) + 1572  [0x100d28cfc]
+    +     865 repack_one_database  (in pg_repack) + 5220  [0x100d2ae10]
+    +       865 pgut_command  (in pg_repack) + 20  [0x100d2d594]
+    +         865 pgut_execute_elevel  (in pg_repack) + 408  [0x100d2db9c]
+    +           865 PQexecFinish  (in libpq.5.15.dylib) + 44  [0x100dab320]
+    +             865 PQgetResult  (in libpq.5.15.dylib) + 100  [0x100daae1c]
+    +               865 pqWaitTimed  (in libpq.5.15.dylib) + 32  [0x100daf0e8]
+    +                 865 pqSocketCheck  (in libpq.5.15.dylib) + 312  [0x100daf26c]
+    +                   865 poll  (in libsystem_kernel.dylib) + 8  [0x196216498]
+    865 Thread_8292560
+      865 start_wqthread  (in libsystem_pthread.dylib) + 8  [0x19624ab74]
+        865 _pthread_wqthread  (in libsystem_pthread.dylib) + 368  [0x19624be6c]
+          865 __workq_kernreturn  (in libsystem_kernel.dylib) + 8  [0x19620f8b0]
+</code></pre>
+        <p>Hmm nothing really stands out but seeing <code>poll</code>... could this be a networking issue? Perhaps due to the long-running transaction? But what kind of networking issue? How could it be that it worked at nighttime but not at daytime?</p>
+        <p>Let&#39;s see what we can find.</p>
+        <pre><code class="language-psql">postgres=> SHOW listen_addresses;
+listen_addresses
+------------------
+*
+(1 row)
+
+postgres=> SHOW statement_timeout;
+statement_timeout
+-------------------
+  0
+(1 row)
+
+postgres=> SHOW idle_in_transaction_session_timeout;
+idle_in_transaction_session_timeout
+-------------------------------------
+  0
+(1 row)
+
+postgres=> SHOW lock_timeout;
+lock_timeout
+--------------
+0
+(1 row)
+</code></pre>
+        <p>That looks fine.</p>
+        <p>After some more searching, I find <a href="https://aiven.io/docs/products/postgresql/reference/idle-connections" target="_blank" rel="noopener noreferrer">this nice reference guide</a>. Let&#39;s look at some TCP-related parameters.</p>
+        <pre><code class="language-psql">postgres=> SHOW tcp_keepalives_idle;
+tcp_keepalives_idle
+---------------------
+  7200
+(1 row)
+
+postgres=> SHOW tcp_keepalives_interval;
+tcp_keepalives_interval
+-------------------------
+  75
+(1 row)
+
+postgres=> SHOW tcp_keepalives_count;
+tcp_keepalives_count
+----------------------
+  9
+(1 row)
+</code></pre>
+        <p>Alright. So those are server-side but what about client-side?</p>
+        <blockquote>
+        <p>The <a href="https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-KEEPALIVES" target="_blank" rel="noopener noreferrer">client-side</a> keep-alive parameters can be set to whatever values you want.</p>
+        </blockquote>
+        <p>So when these are not specified, they&#39;re 0. And according to the <a href="https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-KEEPALIVES" target="_blank" rel="noopener noreferrer">libpq documentation</a>, when the values are 0, libpq uses the system default. So that means my macOS settings.</p>
+        <p>Let me check <code>sysctl net.inet.tcp</code>:</p>
+        <pre><code class="language-psql">net.inet.tcp.keepidle: 7200000
+net.inet.tcp.keepintvl: 75000
+net.inet.tcp.keepcnt: 8
+</code></pre>
+        <p><code>keepalives_idle</code> is 2 hours, <code>keepalives_interval</code> is 75 seconds, and <code>keepalive_count</code> is 8. This means pg_repack on my laptop will only send a keepalive probe after 2 hours.</p>
+        <p>Let&#39;s dig more and find what we can about TCP, keepalive, and these configurations.</p>
+        <p>Found a very nice post (<a href="https://tldp.org/HOWTO/TCP-Keepalive-HOWTO/overview.html" target="_blank" rel="noopener noreferrer">TCP keepalive overview</a>).</p>
+        <blockquote>
+        <p>The other useful goal of keepalive is to prevent inactivity from disconnecting the channel. It&#39;s a very common issue, when you are behind a NAT proxy or a firewall, to be disconnected without a reason. This behavior is caused by the connection tracking procedures implemented in proxies and firewalls, which keep track of all connections that pass through them. Because of the physical limits of these machines, they can only keep a finite number of connections in their memory. The most common and logical policy is to keep newest connections and to discard old and inactive connections first.</p>
+        </blockquote>
+        <p>This sounds like it!</p>
+        <p>Some more Googling and I learn of the term <strong><a href="https://en.wikipedia.org/wiki/Middlebox" target="_blank" rel="noopener noreferrer">middleboxes</a></strong>. I also find <a href="https://news.ycombinator.com/item?id=24060517" target="_blank" rel="noopener noreferrer">this HackerNews comment</a> that mentions &quot;Exhausted NAT state tables is excessively common&quot; and some papers talking about improving reliability in middleboxes. I think we&#39;re getting somewhere now.</p>
+        <p>From the TCP keepalive overview post:</p>
+        <blockquote>
+        <p>Because the normal implementation puts the connection at the top of the list when one of its packets arrives and selects the last connection in the queue when it needs to eliminate an entry, periodically sending packets over the network is a good way to always be in a polar position with a minor risk of deletion.</p>
+        </blockquote>
+<pre><code>    _____           _____                                     _____
+   |     |         |     |                                   |     |
+   |  A  |         | NAT |                                   |  B  |
+   |_____|         |_____|                                   |_____|
+      ^               ^                                         ^
+      |--->--->--->---|----------- SYN ------------->--->--->---|
+      |---<---<---<---|--------- SYN/ACK -----------<---<---<---|
+      |--->--->--->---|----------- ACK ------------->--->--->---|
+      |               |                                         |
+      |               | <--- connection deleted from table      |
+      |               |                                         |
+      |--->- PSH ->---| <--- invalid connection                 |
+      |               |                                         |
+</code></pre>
+        <p>Let&#39;s explicitly set the values for the client-side keepalive parameters and make sure the keepalive probes are being sent more quickly.</p>
+        <p><em>(Next day; 10 am)</em> Let&#39;s append <code>?keepalives_idle=30&amp;keepalives_interval=10&amp;keepalives_count=3</code> to the DB connection URI and try again.</p>
+        <p><em>(10 minutes later)</em> The <code>INSERT</code> process is still <code>active</code>.</p>
+        <p><em>(20 minutes later)</em> The <code>INSERT</code> process is still <code>active</code>?</p>
+        <p><em>(30 minutes later)</em> The <code>INSERT</code> process is still <code>active</code>!</p>
+        <p><em>(Some time later)</em> It worked!!</p>
+        <p>So it was indeed a networking thing; specifically, related to idle connections.</p>
+        <p>Let&#39;s step back for a second, skim the <a href="https://github.com/reorg/pg_repack" target="_blank" rel="noopener noreferrer">source code</a> for a bit, and quickly summarize what pg_repack is doing:</p>
+        <ol>
+        <li>Single process; creates two connections to the Postgres server via libpq.</li>
+        <li>One connection (called <code>connection</code> in the source) is to handle the copying, rebuilding indexes, etc. Another connection (call <code>conn2</code> in the source) is to <a href="https://github.com/reorg/pg_repack/blob/f142143e3cdf5f7f7bdece7b0b946c71309312d1/bin/pg_repack.c#L1778-L1791" target="_blank" rel="noopener noreferrer">hold an <code>ACCESS SHARE</code> table lock</a> to prevent any DDL commands from modifying the table while repacking is in progress.</li>
+        <li><code>conn2</code> only COMMITs after all the work in <code>connection</code> is done. There&#39;s minimal communication between <code>conn2</code> and the pg_repack client, but <code>connection</code> will need to communicate more often.</li>
+        </ol>
+        <p>Now, back to the question of why it works at night but not during the day: I think I finally see what&#39;s most likely happening. My database is close to me, in us-east-1. Because there is more network activity during a 10 am workday than 11 pm / 12 am, middleboxes (NATs, proxies, etc.) were evicting the entry quicker while the connection sat idle for long (more prone to happening when dealing with larger tables and less so with smaller ones). This causes both ends of the connection (pg_repack client on my laptop and the <code>INSERT</code> process on the server) to be effectively dead, but they don&#39;t know of it till one tries sending a message to the other.</p>
+        <p>Postgres on the server is sending data back but it&#39;s not reaching the client. After a little while, and after packet retransmissions, the server declares the peer dead and kills the process. The other connection (<code>LOCK TABLE</code>), just sits idle with neither peer sending packets to each other, so that process still remains.</p>
+        <p>This is probably why lowering <code>keepalives_idle</code> helps.</p>
+        <p><em>After all this, I found another good post (<a href="https://www.cybertec-postgresql.com/en/tcp-keepalive-for-a-better-postgresql-experience/" target="_blank" rel="noopener noreferrer">TCP keepalive for a better PostgreSQL experience</a>), which introduced me to <a href="https://www.postgresql.org/docs/14/runtime-config-connection.html#GUC-CLIENT-CONNECTION-CHECK-INTERVAL" target="_blank" rel="noopener noreferrer"><code>client_connection_check_interval</code></a>.</em></p>
+        <p><em>I also ran pg_repack again, this time with <code>tcpdump</code>, and captured the dump in a pcap file. For next steps, I might use Wireshark and look at the tcpdump (also a good opportunity for me to learn how to use Wireshark!).</em></p>
+        <hr>
+        <p>I&#39;d love to get your feedback and comments. You can reach out to me on <a href="https://x.com/arashn_11" target="_blank" rel="noopener">X</a> or at arashnawy[at]gmail.com.</p>
+      </div>
+    </article>
+  </div>
+</body>
+</html>
